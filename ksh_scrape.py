@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.6
+# -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 asciimoo - asciimoo@gmail.com
 # Licensed under the GNU Affero General Public License v3
@@ -63,18 +64,23 @@ def mergeCaptions(soup):
     return [x[0] for x in headers]
 
 def getRows(data,all=True):
-    return [[''.join(x.findAll(text=True)) for x in row.findAll('td')] if all else
-            [''.join(x.string.split(' ')) if re.match('[0-9]+',''.join(x.string.split(' '))) else x.string for x in row.findAll('td') if x.string]
+    return [[''.join(''.join(x.findAll(text=True)).split(' '))
+             if re.match('[0-9]+',''.join(''.join(x.findAll(text=True)).split(' ')))
+             else ''.join(x.findAll(text=True)) for x in row.findAll('td')]
+            if all else
+            [''.join(x.string.split(' '))
+             if re.match('[0-9]+',''.join(x.string.split(' ')))
+             else x.string
+             for x in row.findAll('td') if x.string]
             for row in data.findAll('tr')]
 
-
 if __name__ == "__main__":
-    #if len(argv) != 2:
-    #    print '[!] Usage: %s [portal.ksh.hu _url] - e.g. http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_zoi011.html' % argv[0]
-    #    exit(1)
-    #URL = argv[1]
+    if len(argv) != 2:
+        print '[!] Usage: %s [portal.ksh.hu _url] - e.g. http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_zoi011.html' % argv[0]
+        exit(1)
+    URL = argv[1]
 
-    URL = 'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_qli049.html'
+    #URL = 'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_qli049.html'
     getContent(URL)
     TITLE = unescape(SOUP.find(attrs={'id': 'title'}).first().find(text=True))
     urlFolder = URL[:URL.rfind('/')]
@@ -87,12 +93,10 @@ if __name__ == "__main__":
 
     TABLES.append(SOUP.find(attrs={'id': 'table'}))
 
-    print URL
-    print TITLE.encode('utf8')
-    #print len(TABLES)
-
     writer = csv.writer(stdout,dialect='excel')
     for soup in TABLES:
         captions=mergeCaptions(soup)
+        writer.writerow([u'Cím'.encode('utf8'),unicode(TITLE).encode('utf8')])
+        writer.writerow([u'Forrás'.encode('utf8'),URL])
         writer.writerow([unicode(x).encode("utf8") for x in captions])
         writer.writerows([[unicode(item).encode("utf8") for item in row] for row in getRows(soup.find(id='tbody'),False) if row])
