@@ -79,24 +79,30 @@ if __name__ == "__main__":
         print '[!] Usage: %s [portal.ksh.hu _url] - e.g. http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_zoi011.html' % argv[0]
         exit(1)
     URL = argv[1]
+    if not re.match(r'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/[a-z0-9.]', URL):
+        print '[!] only http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/ urls allowed'
+        exit(1)
 
     #URL = 'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_qli049.html'
     getContent(URL)
     TITLE = unescape(SOUP.find(attrs={'id': 'title'}).first().find(text=True))
     urlFolder = URL[:URL.rfind('/')]
 
-    TABLES = []
+    TABLES = {}
     morePages = SOUP.find(attrs={'id': 'pages'})
     if morePages:
+        p = morePages.find('span').attrs[0][1]
         for page in morePages.findAll('a'):
-            TABLES.append('/'.join((urlFolder, page.attrs[0][1])))
+            getContent('/'.join((urlFolder, page.attrs[0][1])))
+            TABLES[page.attrs[1][1]] = SOUP.find(attrs={'id': 'table'})
 
-    TABLES.append(SOUP.find(attrs={'id': 'table'}))
+    TABLES[p] = SOUP.find(attrs={'id': 'table'})
 
     writer = csv.writer(stdout,dialect='excel')
-    for soup in TABLES:
+    writer.writerow([u'Cím'.encode('utf8'),unicode(TITLE).encode('utf8')])
+    writer.writerow([u'Forrás'.encode('utf8'),URL])
+    for idx in sorted(TABLES.keys()):
+        soup=TABLES[idx]
         captions=mergeCaptions(soup)
-        writer.writerow([u'Cím'.encode('utf8'),unicode(TITLE).encode('utf8')])
-        writer.writerow([u'Forrás'.encode('utf8'),URL])
         writer.writerow([unicode(x).encode("utf8") for x in captions])
         writer.writerows([[unicode(item).encode("utf8") for item in row] for row in getRows(soup.find(id='tbody'),False) if row])
