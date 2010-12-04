@@ -10,8 +10,6 @@ from sys import argv, exit, stdout
 import re, htmlentitydefs
 import csv
 
-SOUP = None
-
 def unescape(text):
     def fixup(m):
         text = m.group(0)
@@ -34,10 +32,10 @@ def unescape(text):
     return re.sub("&#?\w+;", fixup, text)
 
 def getContent(url):
-    global SOUP
     r = urlopen(url)
-    SOUP = BeautifulSoup(unicode(r.read(), 'iso-8859-2'))
+    res = BeautifulSoup(unicode(r.read(), 'iso-8859-2'))
     r.close()
+    return res
 
 def mergeCaptions(soup):
     # get column headers
@@ -84,19 +82,20 @@ if __name__ == "__main__":
         exit(1)
 
     #URL = 'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_qli049.html'
-    getContent(URL)
-    TITLE = unescape(SOUP.find(attrs={'id': 'title'}).first().find(text=True))
+    soup=getContent(URL)
+    TITLE = unescape(soup.find(attrs={'id': 'title'}).first().find(text=True))
     urlFolder = URL[:URL.rfind('/')]
 
     TABLES = {}
-    morePages = SOUP.find(attrs={'id': 'pages'})
+    p=0
+    morePages = soup.find(attrs={'id': 'pages'})
     if morePages:
         p = morePages.find('span').attrs[0][1]
         for page in morePages.findAll('a'):
-            getContent('/'.join((urlFolder, page.attrs[0][1])))
-            TABLES[page.attrs[1][1]] = SOUP.find(attrs={'id': 'table'})
+            other=getContent('/'.join((urlFolder, page.attrs[0][1])))
+            TABLES[page.attrs[1][1]] = other.find(attrs={'id': 'table'})
 
-    TABLES[p] = SOUP.find(attrs={'id': 'table'})
+    TABLES[p] = soup.find(attrs={'id': 'table'})
 
     writer = csv.writer(stdout,dialect='excel')
     writer.writerow([u'Cím'.encode('utf8'),unicode(TITLE).encode('utf8')])
