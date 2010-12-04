@@ -5,8 +5,9 @@
 
 from BeautifulSoup import BeautifulSoup
 from urllib import urlopen
-from sys import argv, exit
+from sys import argv, exit, stdout
 import re, htmlentitydefs
+import csv
 
 SOUP = None
 
@@ -37,28 +38,70 @@ def getContent(url):
     SOUP = BeautifulSoup(unicode(r.read(), 'iso-8859-2'))
     r.close()
 
-if len(argv) != 2:
-    print '[!] Usage: %s [portal.ksh.hu _url] - e.g. http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_zoi011.html' % argv[0]
-    exit(1)
+def mergeCaptions(soup):
+    # get column headers
+    headers=[]
+    for row in soup.find(id="thead").findAll('tr'):
+        i=0
+        for col in row.findAll('th'):
+            # skip final headers.
+            while i<len(headers) and headers[i][1]:
+                i+=1
+            final=False
+            rowspan=int(col.get('rowspan','1'))
+            if rowspan==2:
+                final=True
+            if rowspan>2:
+                raise ValueError, rowspan
+            colspan=int(col.get('colspan','1'))
+            if i>=len(headers):
+                headers.extend([(col.string,final)]*colspan)
+            else:
+                for j in xrange(colspan):
+                    headers[i+j]=("%s %s" % (headers[i+j][0],col.string),headers[i+j][1])
+            i+=colspan
+    return [x[0] for x in headers]
 
-URL = argv[1]
-getContent(URL)
-TITLE = unescape(SOUP.find(attrs={'id': 'title'}).first().find(text=True))
-urlFolder = URL[:URL.rfind('/')]
+def getRows(data,all=True):
+    res=[]
+    for row in data.findAll('tr'):
+        cols=row.findAll('td')
+        #clss=cols[0].get('class','')
+        if(all):
+            res.append([''.join(x.findAll(text=True)) for x in cols])
+        else:
+            res.append([''.join(x.findAll(text=True)) for x in cols if x.string])
+    return res
+    return [[''.join(x.findAll(text=True)) for x in row.findAll('td')] if all else
+            [x.string for x in row.findAll('td') if x.string]
+            for row in data.findAll('tr')]
 
-TABLES = {}
-morePages = SOUP.find(attrs={'id': 'pages'})
-p = '1'
-if morePages:
-    p = morePages.find('span').attrs[0][1]
-    for page in morePages.findAll('a'):
-        getContent('/'.join((urlFolder, page.attrs[0][1])))
-        TABLES[page.attrs[1][1]] = SOUP.find(attrs={'id': 'table'})
 
+if __name__ == "__main__":
+    #if len(argv) != 2:
+    #    print '[!] Usage: %s [portal.ksh.hu _url] - e.g. http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_zoi011.html' % argv[0]
+    #    exit(1)
+    #URL = argv[1]
 
-TABLES[p] = SOUP.find(attrs={'id': 'table'})
+    URL = 'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_qli049.html'
+    getContent(URL)
+    TITLE = unescape(SOUP.find(attrs={'id': 'title'}).first().find(text=True))
+    urlFolder = URL[:URL.rfind('/')]
 
-print TABLES.keys()
-print URL
-print TITLE
-print len(TABLES)
+    TABLES = []
+    morePages = SOUP.find(attrs={'id': 'pages'})
+    if morePages:
+        for page in morePages.findAll('a'):
+            TABLES.append('/'.join((urlFolder, page.attrs[0][1])))
+
+    TABLES.append(SOUP.find(attrs={'id': 'table'}))
+
+    print URL
+    print TITLE.encode('utf8')
+    #print len(TABLES)
+
+    writer = csv.writer(stdout,dialect='excel')
+    for soup in TABLES:
+        captions=mergeCaptions(soup)
+        writer.writerow([unicode(x).encode("utf8") for x in captions])
+        writer.writerows([[unicode(item).encode("utf8") for item in row] for row in getRows(soup.find(id='tbody'),False) if row])
