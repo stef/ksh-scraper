@@ -63,17 +63,8 @@ def mergeCaptions(soup):
     return [x[0] for x in headers]
 
 def getRows(data,all=True):
-    res=[]
-    for row in data.findAll('tr'):
-        cols=row.findAll('td')
-        #clss=cols[0].get('class','')
-        if(all):
-            res.append([''.join(x.findAll(text=True)) for x in cols])
-        else:
-            res.append([''.join(x.findAll(text=True)) for x in cols if x.string])
-    return res
     return [[''.join(x.findAll(text=True)) for x in row.findAll('td')] if all else
-            [x.string for x in row.findAll('td') if x.string]
+            [''.join(x.string.split(' ')) if re.match('[0-9]+',''.join(x.string.split(' '))) else x.string for x in row.findAll('td') if x.string]
             for row in data.findAll('tr')]
 
 
