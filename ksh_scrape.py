@@ -46,14 +46,19 @@ getContent(URL)
 TITLE = unescape(SOUP.find(attrs={'id': 'title'}).first().find(text=True))
 urlFolder = URL[:URL.rfind('/')]
 
-TABLES = []
+TABLES = {}
 morePages = SOUP.find(attrs={'id': 'pages'})
+p = '1'
 if morePages:
+    p = morePages.find('span').attrs[0][1]
     for page in morePages.findAll('a'):
-        TABLES.append('/'.join((urlFolder, page.attrs[0][1])))
+        getContent('/'.join((urlFolder, page.attrs[0][1])))
+        TABLES[page.attrs[1][1]] = SOUP.find(attrs={'id': 'table'})
 
-TABLES.append(SOUP.find(attrs={'id': 'table'}))
 
+TABLES[p] = SOUP.find(attrs={'id': 'table'})
+
+print TABLES.keys()
 print URL
 print TITLE
 print len(TABLES)
