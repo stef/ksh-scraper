@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.6
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010 asciimoo - asciimoo@gmail.com
+# Copyright (c) 2010 asciimoo - asciimoo@gmail.com, stefan.marsiske@gmail.com
 # Licensed under the GNU Affero General Public License v3
 
 from BeautifulSoup import BeautifulSoup
@@ -9,6 +9,9 @@ from urllib import urlopen
 from sys import argv, exit, stdout
 import re, htmlentitydefs
 import csv
+
+SEQ=False   # list multiple pages vertically (True) or append horizontally(False)?
+ALL=False   # keep intermediate summaries?
 
 def unescape(text):
     def fixup(m):
@@ -77,11 +80,10 @@ if __name__ == "__main__":
         print '[!] Usage: %s [portal.ksh.hu _url] - e.g. http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_zoi011.html' % argv[0]
         exit(1)
     URL = argv[1]
-    if not re.match(r'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/[a-z0-9.]', URL):
+    if not re.match(r'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/[a-z_]+/[a-z0-9.]', URL):
         print '[!] only http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/ urls allowed'
         exit(1)
 
-    #URL = 'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_qli049.html'
     soup=getContent(URL)
     TITLE = unescape(soup.find(attrs={'id': 'title'}).first().find(text=True))
     urlFolder = URL[:URL.rfind('/')]
@@ -90,18 +92,34 @@ if __name__ == "__main__":
     p=0
     morePages = soup.find(attrs={'id': 'pages'})
     if morePages:
+        # handle multi-page data-sets
         p = morePages.find('span').attrs[0][1]
         for page in morePages.findAll('a'):
             other=getContent('/'.join((urlFolder, page.attrs[0][1])))
             TABLES[page.attrs[1][1]] = other.find(attrs={'id': 'table'})
-
     TABLES[p] = soup.find(attrs={'id': 'table'})
 
+    # write out header
     writer = csv.writer(stdout,dialect='excel')
     writer.writerow([u'Cím'.encode('utf8'),unicode(TITLE).encode('utf8')])
     writer.writerow([u'Forrás'.encode('utf8'),URL])
-    for idx in sorted(TABLES.keys()):
-        soup=TABLES[idx]
-        captions=mergeCaptions(soup)
+    if(SEQ):
+        # append every page to the bottom.
+        for idx in sorted(TABLES.keys()):
+            soup=TABLES[idx]
+            captions=mergeCaptions(soup)
+            writer.writerow([unicode(x).encode("utf8") for x in captions])
+            writer.writerows([[unicode(item).encode("utf8") for item in row] for row in getRows(soup.find(id='tbody'),ALL) if row])
+    else:
+        # append every page to the right - horizontally.
+        captions=[]
+        rows=[]
+        for idx in sorted(TABLES.keys()):
+            soup=TABLES[idx]
+            captions.extend(mergeCaptions(soup))
+            for i,row in enumerate(getRows(soup.find(id='tbody'),False)):
+                if row:
+                    if i>=len(rows): rows.append([])
+                    rows[i].extend(row)
         writer.writerow([unicode(x).encode("utf8") for x in captions])
-        writer.writerows([[unicode(item).encode("utf8") for item in row] for row in getRows(soup.find(id='tbody'),False) if row])
+        writer.writerows([[unicode(item).encode("utf8") for item in row] for row in rows])
