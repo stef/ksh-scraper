@@ -117,9 +117,8 @@ if __name__ == "__main__":
         for idx in sorted(TABLES.keys()):
             soup=TABLES[idx]
             captions.extend(mergeCaptions(soup))
-            for i,row in enumerate(getRows(soup.find(id='tbody'),False)):
-                if row:
-                    if i>=len(rows): rows.append([])
-                    rows[i].extend(row)
+            for i,row in enumerate([x for x in getRows(soup.find(id='tbody'),False) if x]):
+                if i>=len(rows)-1: rows.append([])
+                rows[i].extend(row)
         writer.writerow([unicode(x).encode("utf8") for x in captions])
         writer.writerows([[unicode(item).encode("utf8") for item in row] for row in rows])
