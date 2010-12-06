@@ -21,7 +21,7 @@
 
 // (C) 2010 by Stefan Marsiske, <stefan.marsiske@gmail.com>
 
-var scrapeserver="http://sbxo.ctrlc.hu/ksh-scrape?";
+var scrapeserver="http://mx.ctrlc.hu/ksh-scrape?";
 
 div = document.getElementById('title');
 newlink = document.createElement('a');
