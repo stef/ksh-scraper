@@ -4,7 +4,7 @@
 # Copyright (c) 2010 asciimoo - asciimoo@gmail.com, stefan.marsiske@gmail.com
 # Licensed under the GNU Affero General Public License v3
 
-from BeautifulSoup import BeautifulSoup
+from BeautifulSoup import BeautifulSoup, NavigableString
 from urllib import urlopen
 from sys import argv, exit, stdout
 import re, htmlentitydefs
@@ -69,10 +69,10 @@ def getRows(data,all=True):
              if re.match('[0-9]+',''.join(''.join(x.findAll(text=True)).split(' ')))
              else ''.join(x.findAll(text=True)) for x in row.findAll('td')]
             if all else
-            [''.join(x.string.split(' '))
-             if re.match('[0-9]+',''.join(x.string.split(' ')))
-             else x.string
-             for x in row.findAll('td') if x.string]
+            [''.join(x.contents[0].split(' '))
+             if re.match('[0-9]+',''.join(x.contents[0].split(' ')))
+             else x.contents[0]
+             for x in row.findAll('td') if x and isinstance(x.contents[0],NavigableString)]
             for row in data.findAll('tr')]
 
 if __name__ == "__main__":
