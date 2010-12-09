@@ -71,12 +71,12 @@ def mergeCaptions(soup):
     return [x[0] for x in headers]
 
 def getRows(data,all=True):
-    return [[''.join(''.join(x.findAll(text=True)).split(' '))
-             if re.match('[0-9]+',''.join(''.join(x.findAll(text=True)).split(' ')))
+    return [[''.join(unicode(x.findAll(text=True)).translate({' ': None, ',': None}))
+             if re.match('[0-9]+',''.join(unicode(x.findAll(text=True)).translate({' ': None, ',': None})))
              else ''.join(x.findAll(text=True)) for x in row.findAll('td')]
             if all else
-            [''.join(x.contents[0].split(' '))
-             if re.match('[0-9]+',''.join(x.contents[0].split(' ')))
+            [unicode(x.contents[0]).translate({ord(' '): None, ord(','): None})
+             if re.match('[0-9]+',unicode(x.contents[0]).translate({ord(' '): None, ord(','): None}))
              else x.contents[0]
              for x in row.findAll('td') if x and x.contents and isinstance(x.contents[0],NavigableString)]
             for row in data.findAll('tr')]
