@@ -81,11 +81,7 @@ def getRows(data,all=True):
              for x in row.findAll('td') if x and x.contents and isinstance(x.contents[0],NavigableString)]
             for row in data.findAll('tr')]
 
-if __name__ == "__main__":
-    if len(argv) != 2:
-        print '[!] Usage: %s [portal.ksh.hu _url] - e.g. http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_zoi011.html' % argv[0]
-        exit(1)
-    URL = argv[1]
+def kshscrape(URL, out):
     if not re.match(r'http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/[a-z_]+/[a-z0-9.]', URL):
         print '[!] only http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/ urls allowed'
         exit(1)
@@ -106,7 +102,7 @@ if __name__ == "__main__":
     TABLES[p] = soup.find(attrs={'id': 'table'})
 
     # write out header
-    writer = csv.writer(stdout,dialect='excel')
+    writer = csv.writer(out,dialect='excel')
     writer.writerow([u'Cím'.encode('utf8'),unicode(TITLE).encode('utf8')])
     writer.writerow([u'Forrás'.encode('utf8'),URL])
     if(SEQ):
@@ -128,3 +124,25 @@ if __name__ == "__main__":
                 rows[i].extend(row)
         writer.writerow([unicode(x).encode("utf8") for x in captions])
         writer.writerows([[unicode(item).encode("utf8") for item in row] for row in rows])
+
+def kshscrapercgi(environ, start_response):
+    start_response('200 OK', [('Content-Type', 'text/plain')])
+    fd = cStringIO.StringIO()
+    kshscrape(environ['QUERY_STRING'],fd)
+    result=fd.getvalue()
+    fd.close()
+    return [result]
+
+if __name__ == "__main__":
+    import os
+    if 'WSGI_MODE' in os.environ:
+        from fcgi import WSGIServer
+        import cStringIO
+        WSGIServer(kshscrapercgi, bindAddress = '/tmp/fcgi.socket-0').run()
+    else:
+        if len(argv) != 2:
+            print '[!] Usage: %s [portal.ksh.hu _url] - e.g. http://portal.ksh.hu/pls/ksh/docs/hun/xstadat/xstadat_eves/i_zoi011.html' % argv[0]
+            exit(1)
+        kshscrape(argv[1],stdout)
+
+
