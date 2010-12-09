@@ -63,10 +63,10 @@ def mergeCaptions(soup):
                 raise ValueError, rowspan
             colspan=int(col.get('colspan','1'))
             if i>=len(headers):
-                headers.extend([(col.string,final)]*colspan)
+                headers.extend([(col.contents[0],final)]*colspan)
             else:
                 for j in xrange(colspan):
-                    headers[i+j]=("%s %s" % (headers[i+j][0],col.string),headers[i+j][1])
+                    headers[i+j]=("%s %s" % (headers[i+j][0],col.contents[0]),headers[i+j][1])
             i+=colspan
     return [x[0] for x in headers]
 
