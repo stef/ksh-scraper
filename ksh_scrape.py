@@ -7,8 +7,7 @@
 from BeautifulSoup import BeautifulSoup, NavigableString
 from urllib import urlopen
 from sys import argv, exit, stdout
-import re, htmlentitydefs
-import csv
+import re, htmlentitydefs, csv, tidy
 
 SEQ=False   # list multiple pages vertically (True) or append horizontally(False)?
 ALL=False   # keep intermediate summaries?
@@ -36,7 +35,14 @@ def unescape(text):
 
 def getContent(url):
     r = urlopen(url)
-    res = BeautifulSoup(unicode(r.read(), 'iso-8859-2'))
+    xml = unicode(str(tidy.parseString(unicode(r.read(), 'iso-8859-2'), **{'output_xhtml' : 1,
+                                             'add_xml_decl' : 0,
+                                             'indent' : 0,
+                                             'drop-proprietary-attributes': 1,
+                                             'tidy_mark' : 0,
+                                             'doctype' : "strict",
+                                             'wrap' : 0})),'utf8')
+    res = BeautifulSoup(xml)
     r.close()
     return res
 
@@ -72,7 +78,7 @@ def getRows(data,all=True):
             [''.join(x.contents[0].split(' '))
              if re.match('[0-9]+',''.join(x.contents[0].split(' ')))
              else x.contents[0]
-             for x in row.findAll('td') if x and isinstance(x.contents[0],NavigableString)]
+             for x in row.findAll('td') if x and x.contents and isinstance(x.contents[0],NavigableString)]
             for row in data.findAll('tr')]
 
 if __name__ == "__main__":
